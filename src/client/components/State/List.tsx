@@ -44,7 +44,7 @@ const ListItem: React.FC<{
           fontSize: tokens.fontSizes("small"),
         }}
       >
-        {state.type.name}
+        {state.type.join(" | ")}
       </span>
     </li>
   );

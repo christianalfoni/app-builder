@@ -100,7 +100,7 @@ export const useBackend = () => {
 };
 
 function createDataHook<T extends keyof InitData>(
-  data: T,
+  dataKey: T,
   sendUpdate: (update: InitData[T]) => void
 ) {
   const listeners: ((update: InitData[T]) => void)[] = [];
@@ -110,13 +110,13 @@ function createDataHook<T extends keyof InitData>(
     (update: (currentData: InitData[T]) => InitData[T]) => void
   ] => {
     const backend = useBackend();
-    const [state, setState] = React.useState<InitData[T]>(
-      backend.status === "ready" ? backend[data] : {}
+    const [data, setData] = React.useState<InitData[T]>(
+      backend.status === "ready" ? backend[dataKey] : {}
     );
 
     React.useEffect(() => {
       const listener: (update: InitData[T]) => void = (update) => {
-        setState(update);
+        setData(update);
       };
       listeners.push(listener);
       return () => {
@@ -125,13 +125,13 @@ function createDataHook<T extends keyof InitData>(
     });
 
     return [
-      state,
+      data,
       (update) => {
-        const stateUpdate = update(state);
+        const dataUpdate = update(data);
         listeners.forEach((listener) => {
-          listener(stateUpdate);
+          listener(dataUpdate);
         });
-        sendUpdate(stateUpdate);
+        sendUpdate(dataUpdate);
       },
     ];
   };

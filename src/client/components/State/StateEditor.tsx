@@ -1,42 +1,26 @@
 import * as React from "react";
-import { StateValue, Types, ValueType } from "../../../types";
+import { RecordBaseType, StateValue, Types, ValueType } from "../../../types";
 import { useBackendState, useBackendTypes } from "../../backend";
 import { tokens, utils } from "../../styles";
 import { Checkbox, Input, NumberInput } from "../../ui-components/Input";
+import { StateValue as StateValueEditor } from "./StateValue";
 import { TypesEditor } from "./TypesEditor";
 
-type ChangeStateType = (type: string, value: any, path: string[]) => void;
+type ChangeStateType = (type: string) => void;
+type ChangeStateValue = (value: any) => void;
 
 const StateType: React.FC<{
-  type: ValueType;
+  typeNames: string[];
   value: any;
   changeStateType: ChangeStateType;
-  path: string[];
-}> = ({ type, value, changeStateType, path }) => {
-  let Editor: React.FC<{
-    value: any;
-    changeStateType: ChangeStateType;
-    path: string[];
-  }> = () => null;
-
-  if (type.name === "string") {
-    Editor = StringEditor;
-  }
-
-  if (type.name === "number") {
-    Editor = NumberEditor;
-  }
-
-  if (type.name === "boolean") {
-    Editor = BooleanEditor;
-  }
-
+  changeStateValue: ChangeStateValue;
+}> = ({ typeNames, value, changeStateType, changeStateValue }) => {
   return (
     <div>
       <TypesEditor
-        type={type.name}
+        types={typeNames}
         onChange={(type) => {
-          changeStateType(type.name, type.defaultValue, path);
+          changeStateType(type.name);
         }}
       />
       <div
@@ -44,86 +28,14 @@ const StateType: React.FC<{
           padding: tokens.spacing(2),
         }}
       >
-        <Editor value={value} changeStateType={changeStateType} path={path} />
+        <StateValueEditor
+          value={value}
+          typeNames={typeNames}
+          onChange={(value) => {
+            changeStateValue(value);
+          }}
+        />
       </div>
-    </div>
-  );
-};
-
-const StringEditor: React.FC<{
-  value: string;
-  changeStateType: ChangeStateType;
-  path: string[];
-}> = ({ value: initialValue, changeStateType, path }) => {
-  const [value, setValue] = React.useState(JSON.parse(initialValue));
-
-  function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    changeStateType("string", `"${value}"`, path);
-  }
-
-  const hasChanged = JSON.parse(initialValue) !== value;
-
-  return (
-    <form onSubmit={onSubmit}>
-      <Input
-        autoFocus
-        value={value}
-        onChange={setValue}
-        hasChanged={hasChanged}
-      />
-    </form>
-  );
-};
-
-const NumberEditor: React.FC<{
-  value: number;
-  changeStateType: ChangeStateType;
-  path: string[];
-}> = ({ value: initialValue, changeStateType, path }) => {
-  const [value, setValue] = React.useState(initialValue);
-
-  function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    changeStateType("number", value, path);
-  }
-
-  const hasChanged = value !== value;
-
-  return (
-    <form onSubmit={onSubmit}>
-      <NumberInput
-        autoFocus
-        value={value}
-        onChange={setValue}
-        hasChanged={hasChanged}
-      />
-    </form>
-  );
-};
-
-const BooleanEditor: React.FC<{
-  value: boolean;
-  changeStateType: ChangeStateType;
-  path: string[];
-}> = ({ value, changeStateType, path }) => {
-  function setValue(newValue: boolean) {
-    changeStateType("boolean", newValue, path);
-  }
-
-  return <Checkbox autoFocus value={value} onChange={setValue} />;
-};
-
-const DictionaryEditor: React.FC<{
-  value: object;
-  changeStateType: ChangeStateType;
-  path: string[];
-}> = ({ value, changeStateType, path }) => {
-  return (
-    <div>
-      {Object.keys(value).map((key) => {
-        return <div key={key}></div>;
-      })}
     </div>
   );
 };
@@ -136,21 +48,55 @@ export const StateEditor: React.FC<{ name: string; state: StateValue }> = ({
   const [types] = useBackendTypes();
 
   const changeStateType = React.useCallback<ChangeStateType>(
-    (type, value, path) => {
-      setState((current) => ({
-        ...current,
-        [name]: { type: types[type], value },
-      }));
+    (typeName) => {
+      setState((current) => {
+        let type: string[];
+
+        if (current[name].type.includes(typeName)) {
+          type = current[name].type.filter(
+            (existingTypeName) => existingTypeName !== typeName
+          );
+        } else {
+          type = current[name].type.concat(typeName);
+        }
+
+        return {
+          ...current,
+          [name]: {
+            type,
+            value: current[name].value,
+          },
+        };
+      });
     },
-    []
+    [setState]
+  );
+  const changeStateValue = React.useCallback<ChangeStateValue>(
+    (value) => {
+      console.log("SAVING!");
+      setState((current) => {
+        return {
+          ...current,
+          [name]: {
+            type: current[name].type,
+            value,
+          },
+        };
+      });
+    },
+    [setState]
   );
   return (
-    <div>
+    <div
+      style={{
+        position: "relative",
+      }}
+    >
       <StateType
-        type={state.type}
+        typeNames={state.type}
         value={state.value}
         changeStateType={changeStateType}
-        path={[]}
+        changeStateValue={changeStateValue}
       />
     </div>
   );

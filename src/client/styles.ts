@@ -72,6 +72,12 @@ export const tokens = {
       "infoBorder",
       "warningBackground"
     ),
+    sideBar: createColorCssVariables("sideBar")(
+      "background",
+      "foreground",
+      "border",
+      "dropBackground"
+    ),
   },
   spacing: (space: keyof typeof spacing) => spacing[space],
   radii: (rad: keyof typeof radii) => radii[rad],

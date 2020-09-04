@@ -2,33 +2,45 @@ export type State = {
   [name: string]: StateValue;
 };
 
+export type StringBaseType = {
+  type: "string";
+  descriptor: string;
+};
+
+export type NumberBaseType = {
+  type: "number";
+  descriptor: number;
+};
+
+export type BooleanBaseType = {
+  type: "boolean";
+  descriptor: boolean;
+};
+
+export type DictionaryBaseType = {
+  type: "dictionary";
+  descriptor: string;
+};
+
+export type RecordBaseType = {
+  type: "record";
+  descriptor: {
+    [key: string]: string[];
+  };
+};
+
+export type SequenceBaseType = {
+  type: "sequence";
+  descriptor: string[];
+};
+
 export type BaseType =
-  | {
-      type: "string";
-      descriptor: string;
-    }
-  | {
-      type: "number";
-      descriptor: number;
-    }
-  | {
-      type: "boolean";
-      descriptor: boolean;
-    }
-  | {
-      type: "dictionary";
-      descriptor: string;
-    }
-  | {
-      type: "record";
-      descriptor: {
-        [key: string]: string;
-      };
-    }
-  | {
-      type: "sequence";
-      descriptor: string[];
-    };
+  | StringBaseType
+  | NumberBaseType
+  | BooleanBaseType
+  | DictionaryBaseType
+  | RecordBaseType
+  | SequenceBaseType;
 
 export type ValueType =
   | {
@@ -47,11 +59,11 @@ export type ValueType =
   | {
       name: string;
       defaultValue: any;
-      baseType: BaseType[];
+      baseType: BaseType;
     };
 
 export type StateValue = {
-  type: ValueType;
+  type: string[];
   value: any;
 };
 

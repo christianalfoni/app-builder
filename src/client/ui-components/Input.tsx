@@ -26,12 +26,14 @@ const inputStyle: (state?: { hasChanged?: boolean }) => React.CSSProperties = (
 export const Input: React.FC<{
   autoFocus?: boolean;
   hasChanged?: boolean;
+  placeholder?: string;
   value: string;
   onChange: (newValue: string) => void;
-}> = ({ autoFocus, value, onChange, hasChanged }) => {
+}> = ({ autoFocus, value, onChange, hasChanged, placeholder }) => {
   return (
     <input
       autoFocus={autoFocus}
+      placeholder={placeholder}
       type="text"
       style={inputStyle({ hasChanged })}
       value={value}

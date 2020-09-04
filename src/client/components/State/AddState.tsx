@@ -30,7 +30,7 @@ export const AddState: React.FC = () => {
     setState((current) => ({
       ...current,
       [inputValue]: {
-        type: types.string,
+        type: [types.string.name],
         value: types.string.defaultValue,
       },
     }));

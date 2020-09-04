@@ -92,4 +92,12 @@ export class FilesManager {
     await fs.promises.writeFile(file, JSON.stringify(state));
     await this.writeLibrary();
   }
+  async writeTypes(types: Types) {
+    await this.ensureConfigurationDir();
+
+    const file = this.getWorkspacePath(CONFIGURATION_DIR, "types.json")!;
+
+    this.currentTypes = types;
+    await fs.promises.writeFile(file, JSON.stringify(types));
+  }
 }

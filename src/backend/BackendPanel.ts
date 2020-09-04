@@ -88,6 +88,10 @@ export class BackendPanel {
             this.filesManager.writeState(message.data);
             return;
           }
+          case "types": {
+            this.filesManager.writeTypes(message.data);
+            return;
+          }
         }
       },
       null,
@@ -117,8 +121,12 @@ export class BackendPanel {
 
   private _getHtmlForWebview() {
     // Local path to main script run in the webview
-    // const scriptPathOnDisk = vscode.Uri.joinPath(this._extensionUri, 'media', 'main.js');
-
+    const cssPathOnDisk = vscode.Uri.joinPath(
+      this._extensionUri,
+      "media",
+      "cm.css"
+    );
+    const cssUri = this._panel.webview.asWebviewUri(cssPathOnDisk);
     // And the uri we use to load this script in the webview
     //const scriptUri = webview.asWebviewUri(scriptPathOnDisk);
     const scriptUri = "http://localhost:1234/index.js";
@@ -135,10 +143,10 @@ export class BackendPanel {
 					  Use a content security policy to only allow loading images from https or from our extension directory,
 					  and only allow scripts that have a specific nonce.
 				  -->
-				  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} https:; script-src 'nonce-${nonce}';">
-  
+				  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} https:; script-src 'nonce-${nonce}'; style-src ${this._panel.webview.cspSource};">
 				  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-				  <title>Cat Coding</title>
+          <title>Cat Coding</title>
+          <link rel="stylesheet" href="${cssUri}" />
 			  </head>
 			  <body>
 				  <div id="app"></div>
