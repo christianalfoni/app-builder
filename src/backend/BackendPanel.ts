@@ -77,19 +77,38 @@ export class BackendPanel {
       (message: IncomingMessage) => {
         switch (message.type) {
           case "init":
-            this.initializer.initialize((data) => {
+            this.initializer.initialize(async (data) => {
               this.sendMessage({
                 type: "init",
                 data,
               });
+
+              if (data.status === "ready") {
+                this.sendMessage({
+                  type: "state",
+                  data: await this.filesManager.getState(),
+                });
+                this.sendMessage({
+                  type: "types",
+                  data: await this.filesManager.getTypes(),
+                });
+              }
             });
             return;
           case "state": {
             this.filesManager.writeState(message.data);
+            this.sendMessage({
+              type: "state",
+              data: message.data,
+            });
             return;
           }
           case "types": {
             this.filesManager.writeTypes(message.data);
+            this.sendMessage({
+              type: "types",
+              data: message.data,
+            });
             return;
           }
         }
@@ -143,7 +162,7 @@ export class BackendPanel {
 					  Use a content security policy to only allow loading images from https or from our extension directory,
 					  and only allow scripts that have a specific nonce.
 				  -->
-				  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} https:; script-src 'nonce-${nonce}'; style-src ${this._panel.webview.cspSource};">
+				  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${this._panel.webview.cspSource} https:; script-src 'nonce-${nonce}' 'unsafe-eval'; style-src ${this._panel.webview.cspSource};">
 				  <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Cat Coding</title>
           <link rel="stylesheet" href="${cssUri}" />

@@ -19,7 +19,7 @@ export type BooleanBaseType = {
 
 export type DictionaryBaseType = {
   type: "dictionary";
-  descriptor: string;
+  descriptor: string[];
 };
 
 export type RecordBaseType = {
@@ -75,12 +75,7 @@ export type Types = {
   [name: string]: ValueType;
 };
 
-export type InitData = {
-  state: State;
-  types: Types;
-};
-
-export type Init =
+export type Backend =
   | {
       status: "pending";
     }
@@ -91,7 +86,7 @@ export type Init =
       status: "missing-dependencies";
       path: string;
     }
-  | ({
+  | {
       status: "ready";
       path: string;
-    } & InitData);
+    };

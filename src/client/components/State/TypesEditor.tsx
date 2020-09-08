@@ -13,9 +13,42 @@ const baseTypeLabels: { [key: string]: string } = {
   null: "NULL",
 };
 
-const RecordBaseTypeEditor: React.FC<{
-  addType: (baseType: BaseType, defaultValue: any) => void;
-}> = ({ addType }) => {
+type BaseTypeEditorProps = {
+  addType: (name: string, baseType: BaseType, defaultValue: any) => void;
+};
+
+const AddType: React.FC<{
+  onAdd: (name: string) => void;
+  disabled?: boolean;
+}> = ({ onAdd, disabled }) => {
+  const [name, setName] = React.useState("");
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        marginTop: tokens.spacing(2),
+      }}
+    >
+      <Input
+        value={name}
+        disabled={Boolean(disabled)}
+        onChange={setName}
+        placeholder="Enter name of type..."
+      />
+      <Button
+        disabled={disabled || !name}
+        onClick={() => {
+          onAdd(name);
+        }}
+      >
+        add
+      </Button>
+    </div>
+  );
+};
+
+const RecordBaseTypeEditor: React.FC<BaseTypeEditorProps> = ({ addType }) => {
   const [record, setRecord] = React.useState<{ [key: string]: string[] }>({});
   const [newKey, setNewKey] = React.useState("");
 
@@ -27,7 +60,6 @@ const RecordBaseTypeEditor: React.FC<{
 
   return (
     <div>
-      <h2>Record</h2>
       <div
         style={{
           fontSize: tokens.fontSizes("big"),
@@ -71,12 +103,25 @@ const RecordBaseTypeEditor: React.FC<{
                   <TypesSelector
                     types={record[key]}
                     onChange={(newType) => {
-                      setRecord((current) => ({
-                        ...current,
-                        [key]: current[key]
-                          ? current[key].concat(newType.name)
-                          : [newType.name],
-                      }));
+                      setRecord((current) => {
+                        if (
+                          current[key] &&
+                          current[key].includes(newType.name)
+                        ) {
+                          return {
+                            ...current,
+                            [key]: current[key].filter(
+                              (existingType) => existingType !== newType.name
+                            ),
+                          };
+                        }
+                        return {
+                          ...current,
+                          [key]: current[key]
+                            ? current[key].concat(newType.name)
+                            : [newType.name],
+                        };
+                      });
                     }}
                   />
                 </div>
@@ -105,39 +150,81 @@ const RecordBaseTypeEditor: React.FC<{
       >
         {"}"}
       </div>
-      <div
-        style={{
-          display: "flex",
-          marginTop: tokens.spacing(2),
+      <AddType
+        onAdd={(name) => {
+          addType(
+            name,
+            {
+              type: "record",
+              descriptor: record,
+            },
+            {}
+          );
         }}
-      >
-        <div
-          style={{
-            alignSelf: "flex-end",
-          }}
-        >
-          <Button
-            onClick={() => {
-              addType(
-                {
-                  type: "record",
-                  descriptor: record,
-                },
-                {}
-              );
-            }}
-          >
-            add
-          </Button>
-        </div>
-      </div>
+      />
     </div>
   );
 };
 
 const ListBaseTypeEditor: React.FC = () => null;
 
-const DictionaryBaseTypeEditor: React.FC = () => null;
+const DictionaryBaseTypeEditor: React.FC<BaseTypeEditorProps> = ({
+  addType,
+}) => {
+  const [types, setTypes] = React.useState<string[]>([]);
+
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: tokens.fontSizes("big"),
+          fontWeight: "bold",
+        }}
+      >
+        {"{"}
+      </div>
+      <div
+        style={{
+          paddingLeft: tokens.spacing(1),
+        }}
+      >
+        <TypesSelector
+          types={types}
+          onChange={(newType) => {
+            setTypes((current) =>
+              current.includes(newType.name)
+                ? current.filter(
+                    (existingType) => existingType !== newType.name
+                  )
+                : current.concat(newType.name)
+            );
+          }}
+        />
+      </div>
+      <div
+        style={{
+          fontSize: tokens.fontSizes("big"),
+          fontWeight: "bold",
+        }}
+      >
+        {"}"}
+      </div>
+      <AddType
+        disabled={!types.length}
+        onAdd={(name) => {
+          addType(
+            name,
+            {
+              type: "dictionary",
+              descriptor: types,
+            },
+            {}
+          );
+        }}
+      />
+    </div>
+  );
+};
 
 const SequenceBaseTypeEditor: React.FC = () => null;
 
@@ -162,7 +249,6 @@ const TypeCreator: React.FC<{ close: () => void }> = ({ close }) => {
   const [baseType, setBaseType] = React.useState<keyof typeof baseTypeEditors>(
     "Dictionary"
   );
-  const [name, setName] = React.useState("");
   const BaseEditor = baseTypeEditors[baseType];
 
   return (
@@ -170,6 +256,7 @@ const TypeCreator: React.FC<{ close: () => void }> = ({ close }) => {
       style={{
         position: "absolute",
         left: 0,
+        zIndex: 5,
         top: 0,
         width: "100%",
         backgroundColor: tokens.colors.sideBar("background"),
@@ -200,43 +287,43 @@ const TypeCreator: React.FC<{ close: () => void }> = ({ close }) => {
         }}
       >
         <div
-          style={typeStyle("Dictionary", baseType === "Dictionary")}
+          style={typeStyle(baseType === "Dictionary")}
           onClick={() => setBaseType("Dictionary")}
         >
           {"{dictionary}"}
         </div>
         <div
-          style={typeStyle("Record", baseType === "Record")}
+          style={typeStyle(baseType === "Record")}
           onClick={() => setBaseType("Record")}
         >
           {"{record}"}
         </div>
         <div
-          style={typeStyle("List", baseType === "List")}
+          style={typeStyle(baseType === "List")}
           onClick={() => setBaseType("List")}
         >
           {"[list]"}
         </div>
         <div
-          style={typeStyle("Sequence", baseType === "Sequence")}
+          style={typeStyle(baseType === "Sequence")}
           onClick={() => setBaseType("Sequence")}
         >
           {"[sequence]"}
         </div>
         <div
-          style={typeStyle("string", baseType === "string")}
+          style={typeStyle(baseType === "string")}
           onClick={() => setBaseType("string")}
         >
           {baseTypeLabels.string}
         </div>
         <div
-          style={typeStyle("number", baseType === "number")}
+          style={typeStyle(baseType === "number")}
           onClick={() => setBaseType("number")}
         >
           {baseTypeLabels.number}
         </div>
         <div
-          style={typeStyle("boolean", baseType === "boolean")}
+          style={typeStyle(baseType === "boolean")}
           onClick={() => setBaseType("boolean")}
         >
           {baseTypeLabels.boolean}
@@ -247,19 +334,8 @@ const TypeCreator: React.FC<{ close: () => void }> = ({ close }) => {
           padding: tokens.spacing(2),
         }}
       >
-        <div
-          style={{
-            marginBottom: tokens.spacing(2),
-          }}
-        >
-          <Input
-            value={name}
-            onChange={setName}
-            placeholder="Enter name of type..."
-          />
-        </div>
         <BaseEditor
-          addType={(baseType, defaultValue) => {
+          addType={(name, baseType, defaultValue) => {
             setTypes((current) => ({
               ...current,
               [name]: {
@@ -276,7 +352,7 @@ const TypeCreator: React.FC<{ close: () => void }> = ({ close }) => {
   );
 };
 
-const typeStyle = (type: string, isActive: boolean): React.CSSProperties => ({
+const typeStyle = (isActive: boolean): React.CSSProperties => ({
   display: "flex",
   alignItems: "center",
   boxSizing: "border-box",
@@ -308,7 +384,7 @@ const TypesSelector: React.FC<{
         return (
           <div
             key={name}
-            style={typeStyle(name, typeNames.includes(name))}
+            style={typeStyle(typeNames.includes(name))}
             onClick={() => onChange(types[name])}
           >
             {baseTypeLabels[name] || name}

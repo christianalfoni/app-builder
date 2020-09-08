@@ -6,22 +6,52 @@ import { useBackendTypes } from "../../backend";
 import { tokens } from "../../styles";
 import debounce from "lodash.debounce";
 
+function validateParsedValue(
+  parsedValue: any,
+  typeNames: string[],
+  types: Types
+): boolean {
+  return typeNames.reduce((aggr, typeName) => {
+    if (aggr) return true;
+
+    const type = types[typeName];
+
+    if (type.name === "string" && typeof parsedValue === "string") return true;
+    if (type.name === "number" && typeof parsedValue === "number") return true;
+    if (type.name === "boolean" && typeof parsedValue === "boolean")
+      return true;
+    if (type.name === "null" && parsedValue === null) return true;
+    if ("baseType" in type && type.baseType.type === "dictionary") {
+      return Object.keys(parsedValue).reduce((subAggr, key) => {
+        if (!subAggr) return subAggr;
+
+        return validateParsedValue(
+          parsedValue[key],
+          type.baseType.descriptor as string[],
+          types
+        );
+      }, true);
+    }
+
+    if ("baseType" in type && type.baseType.type === "record")
+      return Object.keys(parsedValue).reduce((subAggr, key) => {
+        if (!subAggr) return subAggr;
+
+        return validateParsedValue(
+          parsedValue[key],
+          (type.baseType.descriptor as any)[key] as string[],
+          types
+        );
+      }, Object.keys(parsedValue).length === Object.keys(type.baseType.descriptor).length);
+
+    return aggr;
+  }, false) as any; // WTF typescript?
+}
 function validateValue(value: any, typeNames: string[], types: Types) {
   try {
-    const parsedValue = JSON.parse(value);
+    const parsedValue = new Function(`return ${value}`)();
 
-    return typeNames.reduce((aggr, typeName) => {
-      if (aggr) return true;
-      const type = types[typeName];
-      if (type.name === "string" && typeof parsedValue === "string")
-        return true;
-      if (type.name === "number" && typeof parsedValue === "number")
-        return true;
-      if (type.name === "boolean" && typeof parsedValue === "boolean")
-        return true;
-      if (type.name === "null" && parsedValue === null) return true;
-      return false;
-    }, false);
+    return validateParsedValue(parsedValue, typeNames, types);
   } catch {
     return false;
   }
@@ -38,7 +68,9 @@ export const StateValue: React.FC<{
 
   const isValid = validateValue(value, typeNames, types);
 
-  const debouncedOnChange = React.useCallback(debounce(onChange, 500), []);
+  const debouncedOnChange = React.useCallback(debounce(onChange, 500), [
+    onChange,
+  ]);
 
   React.useLayoutEffect(() => {
     const instance = CodeMirror.fromTextArea(ref.current!, {

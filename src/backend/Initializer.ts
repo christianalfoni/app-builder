@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
-import { Init, PackageJson } from "../types";
+import { Backend, PackageJson } from "../types";
 import { FilesManager } from "./FilesManager";
 
 export class Initializer {
@@ -9,7 +9,7 @@ export class Initializer {
   private packageJsonWatcher:
     | ((curr: fs.Stats, prev: fs.Stats) => void)
     | undefined;
-  async initialize(cb: (data: Init) => void) {
+  async initialize(cb: (data: Backend) => void) {
     const packageJson = this.getPackageJson();
 
     if (packageJson) {
@@ -17,8 +17,6 @@ export class Initializer {
         cb({
           status: "ready",
           path: this.filesManager.getWorkspacePath()!,
-          state: await this.filesManager.getState(),
-          types: await this.filesManager.getTypes(),
         });
       } else {
         this.watchPackageJson(async (updatedPackageJson, unwatch) => {
@@ -30,8 +28,6 @@ export class Initializer {
             cb({
               status: "ready",
               path: this.filesManager.getWorkspacePath()!,
-              state: await this.filesManager.getState(),
-              types: await this.filesManager.getTypes(),
             });
           }
         });

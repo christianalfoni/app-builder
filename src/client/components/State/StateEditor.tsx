@@ -1,8 +1,7 @@
 import * as React from "react";
-import { RecordBaseType, StateValue, Types, ValueType } from "../../../types";
+import { StateValue } from "../../../types";
 import { useBackendState, useBackendTypes } from "../../backend";
-import { tokens, utils } from "../../styles";
-import { Checkbox, Input, NumberInput } from "../../ui-components/Input";
+import { tokens } from "../../styles";
 import { StateValue as StateValueEditor } from "./StateValue";
 import { TypesEditor } from "./TypesEditor";
 
@@ -46,46 +45,39 @@ export const StateEditor: React.FC<{ name: string; state: StateValue }> = ({
 }) => {
   const [_, setState] = useBackendState();
   const [types] = useBackendTypes();
+  const changeStateType: ChangeStateType = (typeName) => {
+    setState((current) => {
+      let type: string[];
 
-  const changeStateType = React.useCallback<ChangeStateType>(
-    (typeName) => {
-      setState((current) => {
-        let type: string[];
+      if (current[name].type.includes(typeName)) {
+        type = current[name].type.filter(
+          (existingTypeName) => existingTypeName !== typeName
+        );
+      } else {
+        type = current[name].type.concat(typeName);
+      }
 
-        if (current[name].type.includes(typeName)) {
-          type = current[name].type.filter(
-            (existingTypeName) => existingTypeName !== typeName
-          );
-        } else {
-          type = current[name].type.concat(typeName);
-        }
+      return {
+        ...current,
+        [name]: {
+          type,
+          value: current[name].value,
+        },
+      };
+    });
+  };
+  const changeStateValue: ChangeStateValue = (value) => {
+    setState((current) => {
+      return {
+        ...current,
+        [name]: {
+          type: current[name].type,
+          value,
+        },
+      };
+    });
+  };
 
-        return {
-          ...current,
-          [name]: {
-            type,
-            value: current[name].value,
-          },
-        };
-      });
-    },
-    [setState]
-  );
-  const changeStateValue = React.useCallback<ChangeStateValue>(
-    (value) => {
-      console.log("SAVING!");
-      setState((current) => {
-        return {
-          ...current,
-          [name]: {
-            type: current[name].type,
-            value,
-          },
-        };
-      });
-    },
-    [setState]
-  );
   return (
     <div
       style={{

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Init, InitData, State, Types } from "../types";
+import { Backend, State, Types } from "../types";
 
 // @ts-ignore
 const vscode = acquireVsCodeApi();
@@ -9,7 +9,7 @@ const vscode = acquireVsCodeApi();
 export type IncomingMessage =
   | {
       type: "init";
-      data: Init;
+      data: Backend;
     }
   | {
       type: "state";
@@ -20,7 +20,7 @@ export type IncomingMessage =
       data: Types;
     };
 
-export type InitListener = (state: Init) => void;
+export type BackendListener = (init: Backend) => void;
 
 export type StateListener = (state: State) => void;
 
@@ -31,31 +31,43 @@ export type TypesListener = (types: Types) => void;
 */
 
 const listeners = {
-  init: [] as InitListener[],
+  backend: [] as BackendListener[],
   state: [] as StateListener[],
+  types: [] as TypesListener[],
 };
 
 window.addEventListener("message", (event) => {
   const message: IncomingMessage = event.data;
-  console.log(JSON.stringify(message, null, 2));
   switch (message.type) {
     case "init":
-      listeners.init.forEach((listener) => listener(message.data));
+      listeners.backend.forEach((listener) => listener(message.data));
       break;
+    case "state":
+      listeners.state.forEach((listener) => listener(message.data));
+      break;
+    case "types":
+      listeners.types.forEach((listener) => listener(message.data));
   }
 });
 
-export const onInit = (listener: InitListener) => {
-  listeners.init.push(listener);
+const onBackend = (listener: BackendListener) => {
+  listeners.backend.push(listener);
   return () => {
-    listeners.init.splice(listeners.init.indexOf(listener), 1);
+    listeners.backend.splice(listeners.backend.indexOf(listener), 1);
   };
 };
 
-export const onState = (listener: StateListener) => {
+const onState = (listener: StateListener) => {
   listeners.state.push(listener);
   return () => {
     listeners.state.splice(listeners.state.indexOf(listener), 1);
+  };
+};
+
+const onTypes = (listener: TypesListener) => {
+  listeners.types.push(listener);
+  return () => {
+    listeners.types.splice(listeners.types.indexOf(listener), 1);
   };
 };
 
@@ -70,6 +82,7 @@ export const sendInit = () => {
 };
 
 export const sendState = (state: State) => {
+  listeners.state.forEach((listener) => listener(state));
   vscode.postMessage({
     type: "state",
     data: state,
@@ -77,6 +90,7 @@ export const sendState = (state: State) => {
 };
 
 export const sendTypes = (types: Types) => {
+  listeners.types.forEach((listener) => listener(types));
   vscode.postMessage({
     type: "types",
     data: types,
@@ -84,69 +98,70 @@ export const sendTypes = (types: Types) => {
 };
 
 /*
-  PROVIDER
+  PROVIDERS
 */
-export type Backend = Init & {
-  sendState(state: State): void;
-};
-const initialBackend: Backend = {
-  status: "pending",
-  sendState,
-};
-const context = React.createContext<Backend>(initialBackend);
+
+const backendContext = React.createContext<Backend>(null as any);
 
 export const useBackend = () => {
-  return React.useContext(context);
+  return React.useContext(backendContext);
 };
 
-function createDataHook<T extends keyof InitData>(
-  dataKey: T,
-  sendUpdate: (update: InitData[T]) => void
-) {
-  const listeners: ((update: InitData[T]) => void)[] = [];
-
-  return (): [
-    InitData[T],
-    (update: (currentData: InitData[T]) => InitData[T]) => void
-  ] => {
-    const backend = useBackend();
-    const [data, setData] = React.useState<InitData[T]>(
-      backend.status === "ready" ? backend[dataKey] : {}
-    );
-
-    React.useEffect(() => {
-      const listener: (update: InitData[T]) => void = (update) => {
-        setData(update);
-      };
-      listeners.push(listener);
-      return () => {
-        listeners.splice(listeners.indexOf(listener), 1);
-      };
-    });
-
-    return [
-      data,
-      (update) => {
-        const dataUpdate = update(data);
-        listeners.forEach((listener) => {
-          listener(dataUpdate);
-        });
-        sendUpdate(dataUpdate);
-      },
-    ];
-  };
-}
-
-export const useBackendState = createDataHook("state", sendState);
-export const useBackendTypes = createDataHook("types", sendTypes);
-
 export const BackendProvider: React.FC = ({ children }) => {
-  const [backend, setBackend] = React.useState<Backend>(initialBackend);
+  const [backend, setBackend] = React.useState<Backend>({
+    status: "pending",
+  });
 
   React.useEffect(() => {
     sendInit();
-    return onInit((init) => setBackend((current) => ({ ...current, ...init })));
+    return onBackend((backend) => setBackend(backend));
   }, []);
 
-  return <context.Provider value={backend}>{children}</context.Provider>;
+  return (
+    <backendContext.Provider value={backend}>
+      {children}
+    </backendContext.Provider>
+  );
+};
+
+const stateContext = React.createContext<State>({});
+
+export const useBackendState = (): [
+  State,
+  (update: (current: State) => State) => void
+] => {
+  const value = React.useContext(stateContext);
+
+  return [value, (update) => sendState(update(value))];
+};
+
+export const BackendStateProvider: React.FC = ({ children }) => {
+  const [state, setState] = React.useState<State>({});
+
+  React.useEffect(() => onState((state) => setState(state)), []);
+
+  return (
+    <stateContext.Provider value={state}>{children}</stateContext.Provider>
+  );
+};
+
+const typesContext = React.createContext<Types>({});
+
+export const useBackendTypes = (): [
+  Types,
+  (update: (current: Types) => Types) => void
+] => {
+  const value = React.useContext(typesContext);
+
+  return [value, (update) => sendTypes(update(value))];
+};
+
+export const BackendTypesProvider: React.FC = ({ children }) => {
+  const [types, setTypes] = React.useState<Types>({});
+
+  React.useEffect(() => onTypes((types) => setTypes(types)), []);
+
+  return (
+    <typesContext.Provider value={types}>{children}</typesContext.Provider>
+  );
 };

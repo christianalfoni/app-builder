@@ -28,11 +28,13 @@ export const Input: React.FC<{
   hasChanged?: boolean;
   placeholder?: string;
   value: string;
+  disabled?: boolean;
   onChange: (newValue: string) => void;
-}> = ({ autoFocus, value, onChange, hasChanged, placeholder }) => {
+}> = ({ autoFocus, value, onChange, hasChanged, placeholder, disabled }) => {
   return (
     <input
       autoFocus={autoFocus}
+      disabled={disabled}
       placeholder={placeholder}
       type="text"
       style={inputStyle({ hasChanged })}
